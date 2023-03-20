@@ -5,37 +5,43 @@ import scipy.stats as st
 
 
 def main():
-    figure, axis = plt.subplots(2)
-    figure.set_size_inches(7, 10)
+    figure, axis = plt.subplots(3)
+    figure.set_size_inches(7, 15)
     axis[0].grid()
     axis[0].set(xlabel='t', ylabel='S(t)')
     axis[1].grid()
-    axis[1].set(xlabel='V(T)', ylabel='density')
+    axis[1].set(xlabel='-S(T)', ylabel='density')
+    axis[2].grid()
+    axis[2].set(xlabel='V(T)', ylabel='density')
 
     N  = 1000
     T  = 2
     n  = 1000
     s0 = 1
+    max = 1.5
     alpha = 0
     sigma = 0.20
 
-    generatepaths(axis[0], axis[1], N, T, n, s0, alpha, sigma)
+    generatepaths(axis[0], axis[1], axis[2], N, T, n, s0, max, alpha, sigma)
 
     plt.savefig('./montecarlo/fig.png')
 
 
 
-def generatepaths(pathfig, endsfig, N, T, n, s0, alpha, sigma):
+def generatepaths(pathfig, endsfig, valuesfig, N, T, n, s0, max, alpha, sigma):
     vs = np.zeros(N)
+    es = np.zeros(N)
 
     ts = np.arange(n * T) / n
     for i in range(N):
         gbm = generateGBM(T, n, s0, alpha, sigma)
         pathfig.plot(ts, gbm)
 
-        vs[i] = np.max(gbm) - gbm[-1]
+        es[i] = -gbm[-1]
+        vs[i] = np.max(np.append(gbm, max)) - gbm[-1]
     
-    endsfig.hist(vs, density=True, bins=40)
+    endsfig.hist(es, density=True, bins=40)
+    valuesfig.hist(vs, density=True, bins=40)
 
 
 def generateGBM(T, n, s0, alpha, sigma):
