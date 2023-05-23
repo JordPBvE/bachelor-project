@@ -30,14 +30,15 @@ class GBM:
     def phi_adjlog(self, u, x, t, T, K):
         tau = T - t
 
-        e1 = i*u*(np.log(x/K)+(self.mu + (self.sigma**2/2))*tau)
-        e2 = -0.5*tau*(self.sigma*u)**2
+        e1 = i*u*np.log(x/K)
+        e2 = i*u*(self.mu - 0.5*self.sigma**2)*tau
+        e3 = -0.5*tau*(self.sigma*u)**2
 
-        return np.exp(e1) * np.exp(e2)
+        return np.exp(e1 + e2 + e3)
 
     def phi_adjlogmax(self, u, x, t, T, K):
         tau = T - t
-        alpha = (self.mu + (self.sigma**2)/2) / self.sigma
+        alpha = (self.mu + 0.5*self.sigma**2) / self.sigma
 
         f1 = 2 * np.exp(i*u*np.log(x/K))
         f2 = 1 - alpha / (i*self.sigma*u + 2*alpha)
@@ -90,13 +91,13 @@ class Lookback(Option):
         tp1 = tp2 = tp3 = 0
         
         if prevex > self.strike:
-            tc1 = Integrals.psi(k, self.a, self.b, 0, adjprev) * 2*(prevex-self.strike)/(self.b-self.a)
-            tc2 = (Integrals.chi(k, self.a, self.b, adjprev, self.b) - Integrals.psi(k, self.a, self.b, adjprev, self.b)) * 2*self.strike/(self.b - self.a)
-            tp3 = (Integrals.psi(k, self.a, self.b, self.a, 0) - Integrals.chi(k, self.a, self.b, self.a, 0))* 2*self.strike/(self.b - self.a)
+            tc1 = self.psi(k, 0, adjprev) * 2*(prevex-self.strike)/(self.b-self.a)
+            tc2 = (self.chi(k, adjprev, self.b) - self.psi(k, adjprev, self.b)) * 2*self.strike/(self.b - self.a)
+            tp3 = (self.psi(k, self.a, 0) - self.chi(k, self.a, 0))* 2*self.strike/(self.b - self.a)
         else:
-            tc3 = (Integrals.chi(k, self.a, self.b, 0, self.b) - Integrals.psi(k, self.a, self.b, 0, self.b))* 2*self.strike/(self.b - self.a)
-            tp1 = Integrals.psi(k, self.a, self.b, adjprev, 0) * 2*(self.strike-prevex)/(self.b-self.a)
-            tp2 = (Integrals.psi(k, self.a, self.b, self.a, adjprev) - Integrals.chi(k, self.a, self.b, self.a, adjprev)) * 2*self.strike/(self.b - self.a)
+            tc3 = (self.chi(k, 0, self.b) - self.psi(k, 0, self.b))* 2*self.strike/(self.b - self.a)
+            tp1 = self.psi(k, adjprev, 0) * 2*(self.strike-prevex)/(self.b-self.a)
+            tp2 = (self.psi(k, self.a, adjprev) - self.chi(k, self.a, adjprev)) * 2*self.strike/(self.b - self.a)
 
         if self.optvar is CALL: return tc1 + tc2 + tc3
         if self.optvar is PUT:  return tp1 + tp2 + tp3
@@ -130,11 +131,15 @@ class Lookback(Option):
 # CHILD OPTION CLASS DESCRIBING COS METHOD PARAMETERS FOR RUROPEAN OPTIONS
 class European(Option):
     def H(self, k):
-        if self.optvar is CALL: return (2*self.strike)/(self.b-self.a) * (self.chi(k, 0, self.b) - self.psi(k, 0, self.b))
-        if self.optvar is PUT:  return (2*self.strike)/(self.b-self.a) * (self.psi(k, self.a, 0) - self.chi(k, self.a, 0))
+        if self.optvar is CALL: return (self.chi(k, 0, self.b) - self.psi(k, 0, self.b)) * (2*self.strike)/(self.b-self.a)
+        if self.optvar is PUT:  return (self.psi(k, self.a, 0) - self.chi(k, self.a, 0)) * (2*self.strike)/(self.b-self.a)
 
     def phi_adjlog_from(self, u, x, t):
         return self.gbm.phi_adjlog(u, x, t, self.T, self.strike)
+    
+    def phi_test(self, u, x, t):
+        tau = self.T - t
+        return np.exp(i*u*np.log(x/self.strike)) * np.exp((self.mu - 0.5 * np.power(self.sigma, 2.0)) * i * u * tau - 0.5 * np.power(self.sigma, 2.0) * np.power(u, 2.0) * tau)
     
     def analytic(self, x, t):
         tau = self.T - t
@@ -143,3 +148,4 @@ class European(Option):
 
         if self.optvar is CALL: return x * norm.cdf(d1) - self.strike * np.exp(-self.mu*tau) * norm.cdf(d2)
         if self.optvar is PUT:  return self.strike * np.exp(-self.mu*tau) * norm.cdf(-d2) - x * norm.cdf(-d1)
+    
