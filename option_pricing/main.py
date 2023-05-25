@@ -1,6 +1,39 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from classes import *
+from colorama import Fore, Style
+
+def MonteCarloDemo():
+    print('\t|\t|          T=1/4\t|          T=1/2\t|          T=1\t\t|          T=2\t\t|')
+    print(f'\t|   K\t|  ANA\t|   MC\t|  {Fore.RED}ERR{Style.RESET_ALL}\t|  ANA\t|   MC\t|  {Fore.RED}ERR{Style.RESET_ALL}\t|  ANA\t|   MC\t|  {Fore.RED}ERR{Style.RESET_ALL}\t|  ANA\t|   MC\t|  {Fore.RED}ERR{Style.RESET_ALL}\t|')
+    for strike in [9, 10, 11]:
+        for var in [CALL, PUT]:
+            print(f'{var.value.lower()}\t| {strike}\t', end='', flush=True)
+            for T in [1/4, 1/2, 1, 2]:
+                gbm = GBM(0.1, 0.4)
+                lower = -10*np.sqrt(2*T)
+                upper =  10*np.sqrt(2*T)
+
+                t = 0.2
+                St = 9
+                if var == CALL : prevex = 10
+                if var == PUT  : prevex = 8
+
+                lb = Lookback(gbmprocess=gbm,
+                            exercisetime=T, 
+                            strikeprice=strike,
+                            optionvariant=var,
+                            lowerintegration=lower, 
+                            upperintegration=upper)
+                analytic   = round(lb.analytic(St, t, prevex), 2)
+                montecarlo = round(lb.MonteCarlo(10000, 1000, t, St, prevex), 2)
+                error      = round(abs(analytic - montecarlo), 2)
+                out = ''
+                out += f'| {"{:.2f}".format(analytic)} \t'
+                out += f'| {"{:.2f}".format(montecarlo)}\t'
+                out += f'| {Fore.RED}{str(error)}{Style.RESET_ALL}\t'
+                print(out, end='', flush=True)
+            print('|', flush=True)
 
 def COS_Error(option, value, time, N, previousextreme=None):
     estimate = COS_Estimate(option, value, time, N, previousextreme)
@@ -18,7 +51,7 @@ def COS_Estimate(option, value, time, N, previousextreme=None):
     us = ks * np.pi / (option.b - option.a)  # defining an array of the factor k*pi/(b-a)
 
     # defining the array of F_k values
-    Fks = np.real(option.phi_adjlog_from(us, value, time) * np.exp(-i * us * option.a))
+    Fks = np.array([np.real(option.phi_adjlog_from(u, value, time) * np.exp(-i * u * option.a)) for u in us])
     Fks[0] *= 0.5
 
     # defining the array of H_k values according to the option specific function
@@ -37,7 +70,7 @@ def COS_Density(option, value, time, N, y):
     us = ks * np.pi / (option.b - option.a)  # defining an array of the factor k*pi/(b-a)
 
     # defining the array of F_k values
-    Fks = (2.0 / (option.b - option.a)) * np.real(option.phi_adjlog_from(us, value, time) * np.exp(-i * us * option.a))
+    Fks = np.array([(2.0 / (option.b - option.a)) * np.real(option.phi_adjlog_from(u, value, time) * np.exp(-i * u * option.a)) for u in us])
     Fks[0] *= 0.5
     
     # defining array of cos(u*(y-a))
@@ -48,13 +81,14 @@ def COS_Density(option, value, time, N, y):
 
     return f_X
 
-def COS_Plot(option, value, time):
-    y = np.linspace(0.05, 5.0, 1000)
+def COS_Plot(option, value, time, ns):
+    y = np.linspace(-2, 2.0, 1000)
     
     # plotting the resulting density function for multiple values of N
-    for n in [2**k for k in range(2, 7)]:
+    for n in ns:
         f_X = COS_Density(option, value, time, n, y)
         plt.plot(y, f_X)
+        plt.vlines(np.log(value/option.strike), -1, 6, colors='k', linestyles='dotted')
 
     plt.savefig('./option_pricing/fig.png')
 
@@ -70,20 +104,23 @@ def EU(t, St, K, variant, T, mu, sigma):
                   lowerintegration=lower, 
                   upperintegration=upper)
     
-    analytic = eu.analytic(St, t)
+    analytic   = eu.analytic(St, t)
+    montecarlo = eu.MonteCarlo(10000, 1000, t, St)
     print(f'analytic:    {analytic}')
+    print(f'monte carlo: {montecarlo}\n')
 
-    for n in [16, 32, 64, 128, 256]:
+    ns = [16, 32, 64, 128, 256]
+    for n in ns:
         est = COS_Estimate(eu, St, t, n)
         print(f'for N={n}, the estimate is {est}')
     
-    # COS_Plot(eu, 100, 0)
+    COS_Plot(eu, St, t, ns)
 
 def LB(t, St, K, prevex, variant, T, mu, sigma):
 
     gbm = GBM(mu, sigma)
-    lower = -10*np.sqrt(2*T)
-    upper =  10*np.sqrt(2*T)
+    lower = -10*np.sqrt(T)
+    upper =  10*np.sqrt(T)
 
     lb = Lookback(gbmprocess=gbm,
                   exercisetime=T, 
@@ -93,14 +130,16 @@ def LB(t, St, K, prevex, variant, T, mu, sigma):
                   upperintegration=upper)
     
     analytic = lb.analytic(St, t, prevex)
+    # montecarlo = lb.MonteCarlo(10000, int(200 / T), t, St, prevex)
     print(f'analytic:    {analytic}')
-
-    for n in [16, 32, 64, 128, 256, 512, 1024]:
+    # print(f'monte carlo: {montecarlo}\n')
+    ns = [16, 32, 64, 128, 256]
+    for n in ns:
         est = COS_Estimate(lb, St, t, n, prevex)
         print(f'for N={n}, the estimate is {est}')
     
-    # COS_Plot(lb, 100, 0)
+    COS_Plot(lb, St, t, ns)
 
-# EU(t=0.1, St=100, K=120, variant=CALL, T=0.3, mu=0.05, sigma=0.2)
-
-LB(t=0.1, St=100, K=120, prevex=130, variant=CALL, T=0.3, mu=0.05, sigma=0.2)
+# EU(t=0.1, St=100, K=80, variant=CALL, T=1, mu=0.1, sigma=1.4)
+# LB(t=0.1, St=100, prevex=110, K=95, variant=CALL, T=1/2, mu=0.05, sigma=0.2)
+LB(t=0.1, St=91, prevex=90, K=95, variant=PUT, T=1/2, mu=0.05, sigma=0.2)
