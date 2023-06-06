@@ -26,8 +26,11 @@ def sump(array):
 def phi_N(u):
     return np.exp(-0.5 * u**2)
 
+class Process:
+    pass
+
 # CLASS DEFINING A GEOMETRIC BROWNIAN MOTION AND CHARACTERISTIC FUNCTIONS FOR PROCESSES DERIVED FROM GEOMETRIC BROWNIAN MOTIONS
-class GBM:
+class GBM(Process):
     def __init__(self, mu, sigma):
         self.mu    = mu
         self.sigma = sigma
@@ -110,6 +113,22 @@ class Option:
         ts  = np.arange(int(steps * tau)) / steps
 
         return st * np.exp((self.mu - np.power(self.sigma, 2)/2) * ts + self.sigma * srw)
+        
+    def spitzer_recurrence(self, m : int, z : complex):
+        p = np.zeros((m, m))
+        for i in range(m):
+            p[0,i] = self.process.a(i, z) / (i+1)
+        
+        out = p[0, m-1]
+        
+        for i in range(1, m):
+            for j in range(1, m - i):
+                for k in range(j+1):
+                    p[i, j] += p[i-1, k] * p[0, j-k]
+
+            out += p[i, m-1-i] / math.factorial(i+1)
+
+        return out
     
 # CHILD OPTION CLASS DESCRIBING COS METHOD PARAMETERS FOR LOOKBACK OPTIONS
 class Lookback(Option):
@@ -139,8 +158,8 @@ class Lookback(Option):
         if self.optvar is PUT:  return tp1 + tp2 + tp3
        
     def phi_adjlog_from(self, u, x, t):
-        if self.optvar is CALL: return self.process.phi_adjlogmax(u, x, t, self.T, self.strike)
-        if self.optvar is PUT:  return self.process.phi_adjlogmin(u, x, t, self.T, self.strike)
+        if self.optvar is CALL: return self.gbm.phi_adjlogmax(u, x, t, self.T, self.strike)
+        if self.optvar is PUT:  return self.gbm.phi_adjlogmin(u, x, t, self.T, self.strike)
     
     def analytic(self, x, t, prevex):
         tau = self.T - t
@@ -175,7 +194,7 @@ class European(Option):
         if self.optvar is PUT:  return (self.psi(k, self.a, 0) - self.chi(k, self.a, 0)) * (2*self.strike)/(self.b-self.a)
 
     def phi_adjlog_from(self, u, x, t):
-        return self.process.phi_adjlog(u, x, t, self.T, self.strike)
+        return self.gbm.phi_adjlog(u, x, t, self.T, self.strike)
     
     def phi_test(self, u, x, t):
         tau = self.T - t

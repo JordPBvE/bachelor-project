@@ -19,7 +19,7 @@ def MonteCarloDemo():
                 if var == CALL : prevex = 10
                 if var == PUT  : prevex = 8
 
-                lb = Lookback(stockmechanic=gbm,
+                lb = Lookback(gbmprocess=gbm,
                             exercisetime=T, 
                             strikeprice=strike,
                             optionvariant=var,
@@ -63,7 +63,7 @@ def COS_Estimate(option, value, time, N, previousextreme=None):
     # multiplying the Fk values by the Hk values
     vs = np.array([F * H for F, H in zip(Fks, Hs)])
 
-    return np.exp(-option.process.mu * tau) * np.sum(vs)
+    return np.exp(-option.gbm.mu * tau) * np.sum(vs)
 
 def COS_Density(option, value, time, N, y):
     ks = np.linspace(0, N-1, N)  # defining an array with all values of k
@@ -97,7 +97,7 @@ def EU(t, St, K, variant, T, mu, sigma):
     lower = -10*np.sqrt(T-t)
     upper =  10*np.sqrt(T-t)
 
-    eu = European(stockmechanic=gbm,
+    eu = European(gbmprocess=gbm,
                   exercisetime=T, 
                   strikeprice=K,
                   optionvariant=variant, 
@@ -122,7 +122,7 @@ def LB(t, St, K, prevex, variant, T, mu, sigma):
     lower = -10*np.sqrt(T)
     upper =  10*np.sqrt(T)
 
-    lb = Lookback(stockmechanic=gbm,
+    lb = Lookback(gbmprocess=gbm,
                   exercisetime=T, 
                   strikeprice=K,
                   optionvariant=variant,
@@ -141,7 +141,7 @@ def LB(t, St, K, prevex, variant, T, mu, sigma):
     COS_Plot(lb, St, t, [256])
 
 # EU(t=0.1, St=100, K=80, variant=CALL, T=1, mu=0.1, sigma=1.4)
-# LB(t=0.1, St=100, prevex=110, K=100, variant=CALL, T=1/2, mu=0.05, sigma=0.2)
-# LB(t=0.1, St=100, prevex=100, K=100, variant=PUT, T=1/2, mu=0.05, sigma=0.2)
+LB(t=0.1, St=100, prevex=110, K=100, variant=CALL, T=1/2, mu=0.05, sigma=0.2)
+LB(t=0.1, St=100, prevex=100, K=100, variant=PUT, T=1/2, mu=0.05, sigma=0.2)
 
-MonteCarloDemo()
+# MonteCarloDemo()
