@@ -86,7 +86,7 @@ class Option:
         else:
             return (np.sin(k*np.pi*(d-self.a)/(self.b-self.a)) - np.sin(k*np.pi*(c-self.a)/(self.b-self.a))) * (self.b-self.a) / (k*np.pi)
         
-    def MonteCarlo(self, iterations, steps, t, st, prevex=None):
+    def MonteCarlo(self, iterations, steps, t, st, prevex=None, adjlogs = False):
         vs = np.zeros(iterations)
 
         percentage = 0.0
@@ -100,22 +100,30 @@ class Option:
             
             
             gbm = self.samplepath(self.T - t, steps, st)
-            vs[i] = self.payoff(gbm, prevex)
+            vs[i] = self.payoff(gbm, prevex, adjlogs)
         sys.stdout.write('\b\b\b\b\b\b\b')
         # print(vs)
-        return np.exp(-self.mu*(self.T-t)) * np.average(vs)
+
+
+        if adjlogs: return vs
+        else:         return np.exp(-self.mu*(self.T-t)) * np.average(vs)
 
     def samplepath(self, tau, steps, st):
         srw = (1 / np.sqrt(steps)) * np.cumsum([0] + [random.choice([-1, 1]) for _ in range(int(steps * tau) - 1)])
         ts  = np.arange(int(steps * tau)) / steps
 
         return st * np.exp((self.mu - np.power(self.sigma, 2)/2) * ts + self.sigma * srw)
+        
     
 # CHILD OPTION CLASS DESCRIBING COS METHOD PARAMETERS FOR LOOKBACK OPTIONS
 class Lookback(Option):
-    def payoff(self, path, prevex):
+    def payoff(self, path, prevex, adjlogs=False):
         mx = np.max(np.append(path, prevex))
         mn = np.min(np.append(path, prevex))
+
+        if adjlogs:
+            if self.optvar == CALL: return np.log(mx/self.strike)
+            if self.optvar == PUT:  return np.log(mn/self.strike)
 
         if self.optvar == CALL: return np.maximum(mx - self.strike, 0) 
         if self.optvar == PUT:  return np.maximum(self.strike - mn, 0) 
@@ -165,8 +173,11 @@ class Lookback(Option):
 
 # CHILD OPTION CLASS DESCRIBING COS METHOD PARAMETERS FOR RUROPEAN OPTIONS
 class European(Option):
-    def payoff(self, path, prevex):
+    def payoff(self, path, prevex, adjlogs=False):
         s = path[-1]
+        if adjlogs: return np.log(s/self.strike)
+
+
         if self.optvar == CALL: return np.maximum(s - self.strike, 0) 
         if self.optvar == PUT:  return np.maximum(self.strike - s, 0) 
 

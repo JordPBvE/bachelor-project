@@ -19,7 +19,7 @@ def MonteCarloDemo():
                 if var == CALL : prevex = 10
                 if var == PUT  : prevex = 8
 
-                lb = Lookback(stockmechanic=gbm,
+                lb = Lookback(gbmprocess=gbm,
                             exercisetime=T, 
                             strikeprice=strike,
                             optionvariant=var,
@@ -81,16 +81,20 @@ def COS_Density(option, value, time, N, y):
 
     return f_X
 
-def COS_Plot(option, value, time, ns):
-    y = np.linspace(-2, 2.0, 1000)
+def COS_Plot(option : Option, value, time, ns):
+    y = np.linspace(-1, 1, 1000)
     
     # plotting the resulting density function for multiple values of N
     for n in ns:
         f_X = COS_Density(option, value, time, n, y)
         plt.plot(y, f_X)
-        plt.vlines(np.log(value/option.strike), -1, 6, colors='k', linestyles='dotted')
+        # plt.vlines(np.log(value/option.strike), -.5, 4, colors='k', linestyles='dotted')
 
-    plt.savefig('./option_pricing/fig.png')
+    values = option.MonteCarlo(10000, 1000, time, value, prevex=value, adjlogs=True)
+
+    plt.hist(values, density=True, bins=40)
+
+    plt.savefig('./option_pricing_extended/fig.png')
 
 def EU(t, St, K, variant, T, mu, sigma):
     gbm = GBM(mu, sigma)
@@ -105,16 +109,16 @@ def EU(t, St, K, variant, T, mu, sigma):
                   upperintegration=upper)
     
     analytic   = eu.analytic(St, t)
-    montecarlo = eu.MonteCarlo(10000, 1000, t, St)
+    # montecarlo = eu.MonteCarlo(10000, 1000, t, St)
     print(f'analytic:    {analytic}')
-    print(f'monte carlo: {montecarlo}\n')
+    # print(f'monte carlo: {montecarlo}\n')
 
-    ns = [16, 32, 64, 128, 256]
+    ns = [256]
     for n in ns:
         est = COS_Estimate(eu, St, t, n)
         print(f'for N={n}, the estimate is {est}')
     
-    COS_Plot(eu, St, t, ns)
+    # COS_Plot(eu, St, t, ns)
 
 def LB(t, St, K, prevex, variant, T, mu, sigma):
     print(f'======================{variant.value.upper()}======================')
@@ -138,10 +142,10 @@ def LB(t, St, K, prevex, variant, T, mu, sigma):
         est = COS_Estimate(lb, St, t, n, prevex)
         print(f'for N={n}, the estimate is {est}')
     
-    COS_Plot(lb, St, t, [256])
+    # COS_Plot(lb, St, t, [256])
 
-# EU(t=0.1, St=100, K=80, variant=CALL, T=1, mu=0.1, sigma=1.4)
-# LB(t=0.1, St=100, prevex=110, K=100, variant=CALL, T=1/2, mu=0.05, sigma=0.2)
-# LB(t=0.1, St=100, prevex=100, K=100, variant=PUT, T=1/2, mu=0.05, sigma=0.2)
+EU(t=0.5, St=100, K=80, variant=CALL, T=1, mu=0.1, sigma=0.2)
+LB(t=0.1, St=100, prevex=110, K=100, variant=CALL, T=1/2, mu=0.1, sigma=0.2)
+LB(t=0.1, St=100, prevex=100, K=100, variant=PUT, T=1/2, mu=0.05, sigma=0.2)
 
-MonteCarloDemo()
+# MonteCarloDemo()
