@@ -46,22 +46,12 @@ class GBM:
         alpha = (self.mu - 0.5*self.sigma**2) / self.sigma
 
         f1 = 2 * np.exp(i*u*np.log(x/K))
-        f2 = 1 - (alpha / (i*self.sigma*u + 2*alpha))
+        f2 = (1 - (alpha / (i*self.sigma*u + 2*alpha)))
         f3 = np.exp(-i * (self.sigma*u - 2*alpha*i) * tau * alpha)
         f4 = phi_N(math.sqrt(tau) * (self.sigma * u - 2*alpha*i))
 
         return f1 * f2 * f3 * f4
-
-    def phi_adjlogmin(self, u, x, t, T, K):
-        tau = T - t
-        alpha = (self.mu - 0.5*self.sigma**2) / self.sigma
-
-        f1 = 2 * np.exp(i*u*(np.log(x/K) + 2*alpha*tau))
-        f2 = 1 - (alpha / (2*alpha - i*u*self.sigma))
-        f3 = np.exp(i * (u*self.sigma + 2*alpha*i) * tau * alpha)
-        f4 = phi_N(math.sqrt(tau) * (u*self.sigma + 2*i*alpha))
-
-        return f1 * f2 * f3 * f4
+    
 # PARENT CLASS DEFINING OPTIONS 
 class Option:
     def __init__(self, stockmechanic, exercisetime, strikeprice, optionvariant, lowerintegration, upperintegration):
@@ -148,7 +138,7 @@ class Lookback(Option):
        
     def phi_adjlog_from(self, u, x, t):
         if self.optvar is CALL: return self.process.phi_adjlogmax(u, x, t, self.T, self.strike)
-        if self.optvar is PUT:  return self.process.phi_adjlogmin(u, x, t, self.T, self.strike)
+        if self.optvar is PUT:  raise Exception("Lookback puts are not available")
     
     def analytic(self, x, t, prevex):
         tau = self.T - t
@@ -187,10 +177,6 @@ class European(Option):
 
     def phi_adjlog_from(self, u, x, t):
         return self.process.phi_adjlog(u, x, t, self.T, self.strike)
-    
-    def phi_test(self, u, x, t):
-        tau = self.T - t
-        return np.exp(i*u*np.log(x/self.strike)) * np.exp((self.mu - 0.5 * np.power(self.sigma, 2.0)) * i * u * tau - 0.5 * np.power(self.sigma, 2.0) * np.power(u, 2.0) * tau)
     
     def analytic(self, x, t):
         tau = self.T - t

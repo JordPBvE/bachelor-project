@@ -6,20 +6,19 @@ import matplotlib.pyplot as plt
 def main():
     figure, axis = plt.subplots(3)
     figure.set_size_inches(7, 15)
-    axis[0].grid()
     axis[0].set(xlabel='t', ylabel='S(t)')
-    axis[1].grid()
+    axis[0].grid()
     axis[1].set(xlabel='-S(T)', ylabel='density')
     axis[2].grid()
     axis[2].set(xlabel='V(T)', ylabel='density')
 
-    N  = 1000
+    N  = 1
     T  = 2
     n  = 1000
     s0 = 1
     max = 1.5
-    alpha = 0
-    sigma = 0.20
+    alpha = 0.1
+    sigma = 0.2
 
     generatepaths(axis[0], axis[1], axis[2], N, T, n, s0, max, alpha, sigma)
 
@@ -34,13 +33,13 @@ def generatepaths(pathfig, endsfig, valuesfig, N, T, n, s0, max, alpha, sigma):
     ts = np.arange(n * T) / n
     for i in range(N):
         gbm = generateGBM(T, n, s0, alpha, sigma)
-        pathfig.plot(ts, gbm)
+        pathfig.plot(ts, gbm) #, linewidth=.3, color='k')
 
         es[i] = -gbm[-1]
         vs[i] = np.max(np.append(gbm, max)) - gbm[-1]
     
-    endsfig.hist(es, density=True, bins=40)
-    valuesfig.hist(vs, density=True, bins=40)
+    endsfig.hist(es, density=True, bins=60)
+    valuesfig.hist(vs, density=True, bins=60)
 
 
 def generateGBM(T, n, s0, alpha, sigma):

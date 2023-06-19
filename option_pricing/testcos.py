@@ -113,9 +113,9 @@ def mainCalculation():
         
     CP = "c"
     S0 = 100.0
-    r = 0.05
+    r = -0.05
     sigma = 0.2
-    tau = 0.1
+    tau = 1
     K = [100.0]
     N = 256
     L = 10
