@@ -21,7 +21,7 @@ pip install numpy matplotlib scipy colorama winsound
 ```
 
 ## Usage
-To run one of the four programs navigate into the correct folder in your terminal and run
+To run one of the four programs, navigate into the correct folder in your terminal and run
 ```
 python main.py
 ```
